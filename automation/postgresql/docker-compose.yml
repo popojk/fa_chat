@@ -1,6 +1,5 @@
 version: '3.5'
 services:
-
   master:
       restart: always
       image: postgres:13
@@ -12,26 +11,30 @@ services:
         - POSTGRES_USER=postgres
         - POSTGRES_DB=fa_chat
       volumes:
-        - ./data/master:/var/lib/postgresql/data
+        #- ./data/master:/var/lib/postgresql/data
+        - my_postgres_data:/var/lib/postgresql/data
       networks:
         mynetwork:
           ipv4_address: 179.19.0.101
 
-  slave:
-      restart: always
-      image: postgres:13
-      container_name: slave_postgres
-      ports:
-        - "5434:5432"
-      environment:
-        - POSTGRES_PASSWORD=password
-        - POSTGRES_USER=postgres
-        - POSTGRES_DB=postgres
-      volumes:
-        - ./data/slave:/var/lib/postgresql/data
-      networks:
-        mynetwork:
-          ipv4_address: 179.19.0.102
+  # slave:
+    #  restart: always
+    #  image: postgres:13
+    #  container_name: slave_postgres
+    #  ports:
+    #    - "5434:5432"
+    #  environment:
+    #    - POSTGRES_PASSWORD=password
+    #    - POSTGRES_USER=postgres
+    #    - POSTGRES_DB=postgres
+    #  volumes:
+    #    - ./data/slave:/var/lib/postgresql/data
+    #  networks:
+    #    mynetwork:
+    #      ipv4_address: 179.19.0.102
+
+volumes:
+  my_postgres_data:
 
 networks:
   mynetwork:
