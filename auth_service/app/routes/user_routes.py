@@ -1,7 +1,9 @@
 from app.routes.abstracts.abstract_routes import AbstractRoutes
 from app.services.file_services import FileServices
 from app.services.user_services import UserServices
-from fastapi import File, UploadFile, Body
+from app.schemas.user_schema import UserSchema, LoginSchema, AuthenticateSchema
+from fastapi import File, UploadFile
+from fastapi.params import Body
 
 
 class UserRoutes(AbstractRoutes):
@@ -23,22 +25,19 @@ class UserRoutes(AbstractRoutes):
             '/api/users/authenticate', self.authenticate, methods=['POST']
         )
 
-    def register(self, data: dict = Body(...,
-                                         title='Request Body',
-                                         )):
-        new_user = self.user_services.register(data)
+    def register(self, data: UserSchema):
+        print(data)
+        new_user = self.user_services.register(data.model_dump())
         return self.handle_response(new_user)
 
-    def login(self, data: dict = Body(...,
-                                         title='Request Body',
-                                         )):
-        jwt = self.user_services.login(data['username'], data['password'])
+    def login(self, data: LoginSchema):
+        user_data = data.model_dump()
+        jwt = self.user_services.login(user_data['username'], user_data['password'])
         return self.handle_response(jwt)
 
-    def authenticate(self, data: dict = Body(...,
-                                         title='Request Body',
-                                         )):
-        jwt = data['jwt']
+    def authenticate(self, data: AuthenticateSchema):
+        auth_data = data.model_dump()
+        jwt = auth_data['jwt']
         user = self.user_services.authenticate(jwt)
         return self.handle_response(user)
 

@@ -2,7 +2,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.models.user_models import User
 from sqlalchemy.orm import Session
-from app.database.database import SessionLocal, get_db
+from sqlalchemy import delete
+from app.database.database import get_db, db_session_decorator
 from app.tools.bcrypt import hash_pass, verify_pass
 from jose import JWTError, jwt
 
@@ -11,6 +12,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
 
 class UserServices:
     SECRET_KEY = os.getenv("SECRET_KEY")
@@ -21,21 +23,21 @@ class UserServices:
         # self.db = SessionLocal()
         pass
 
-    def register(self, user_data: dict):
-        with get_db() as db:
-            user = db.query(User).filter(User.name == user_data['name']).first()
-            if user:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f'User {user_data["name"]} already exists'
-                )
-            hash = hash_pass(user_data['password'])
-            user_data['password'] = hash
-            new_user = User(**user_data)
-            db.add(new_user)
-            db.commit()
-            db.refresh(new_user)
-            return new_user
+    @db_session_decorator
+    def register(self, db, user_data: dict):
+        user = db.query(User).filter(User.name == user_data['name']).first()
+        if user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'User {user_data["name"]} already exists'
+            )
+        hash = hash_pass(user_data['password'])
+        user_data['password'] = hash
+        new_user = User(**user_data)
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
 
     def login(self, username, password):
         with get_db() as db:
@@ -58,22 +60,30 @@ class UserServices:
         else:
             expire = datetime.utcnow() + timedelta(minutes=int(self.ACCESS_TOKEN_EXPIRE_MINUTES))
         to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
+        encoded_jwt = jwt.encode(
+            to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
         return encoded_jwt
 
     def authenticate(self, token: str):
         with get_db() as db:
             try:
-                payload = jwt.decode(token, self.SECRET_KEY, algorithms=self.ALGORITHM)
+                payload = jwt.decode(token, self.SECRET_KEY,
+                                     algorithms=self.ALGORITHM)
                 name: str = payload['name']
                 if name is None:
                     raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid credentials"
-                )
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid credentials"
+                    )
             except JWTError:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid credentials"
                 )
-            return self.db.query(User).filter(User.name == name).first()
+            return db.query(User).filter(User.name == name).first()
+
+    def delete_user(self, name: str):
+        with get_db() as db:
+            stmt = delete(User).where(User.name == name)
+            db.execute(stmt)
+            db.commit()
