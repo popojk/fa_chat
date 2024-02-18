@@ -26,7 +26,6 @@ class UserRoutes(AbstractRoutes):
         )
 
     def register(self, data: UserSchema):
-        print(data)
         new_user = self.user_services.register(data.model_dump())
         return self.handle_response(new_user)
 
