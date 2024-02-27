@@ -8,3 +8,5 @@ python-multipart
 alembic
 python-dotenv
 python-jose
+redis
+redis-om
